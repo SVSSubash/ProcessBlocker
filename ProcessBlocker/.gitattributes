@@ -1,0 +1,29 @@
+# Auto detect text files and perform LF normalization
+*                text=auto
+
+*.cs             text diff=csharp
+*.java           text diff=java
+*.html           text diff=html
+*.css            text
+*.js             text
+*.json           text
+*.sql            text
+*.config         text
+*.txt            text
+*.xml            text
+*.cmd            text
+*.ps1            text
+*.psd1           text
+*.psm1           text
+*.inf            text
+*.migtable       text
+
+*.csproj         text merge=union
+*.vcxproj        text merge=union
+*.noproj         text merge=union
+*.nuproj         text merge=union
+*.proj           text merge=union
+*.ncrunchproject text merge=union
+
+# Solution files should always have CRLF line endings on checkout.
+*.sln            text merge=union eol=crlf

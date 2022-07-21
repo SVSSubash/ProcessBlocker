@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
+using System.Windows.Forms;
 
 public static class ProcessBlocker
 {
@@ -32,12 +35,14 @@ public static class ProcessBlocker
     private static bool BlockProcess()
     {
         Console.ReadKey();
+
         return true;
     }
 
     private static Process GetCurrentProcessInformation()
     {
         Process currentProcess = Process.GetCurrentProcess();
+
         return currentProcess;
     }
 
@@ -46,69 +51,126 @@ public static class ProcessBlocker
         return Environment.UserInteractive;
     }
 
-    private static bool ShowMessage(Process process, bool IsUser)
+    private static bool ServiceMessage(string message, string title)
     {
-        string jsonString = process.ProcessName + process.Id + "IsUser=" + IsUser;
+        Console.Out.WriteLine(message);
 
-        #region ServiceMessage
-        //Console.Out.WriteLine(jsonString);
-        //bool result = false;
-        //String title = "DEBUGGER HELPER INFO:";
-        //int tlen = title.Length;
-        //String msg = jsonString;
-        //int mlen = msg.Length;
-        //int resp = 7;
-        //result = WTSSendMessage(WTS_CURRENT_SERVER_HANDLE, 1, title, tlen, msg, mlen, 4, 0, out resp, true);
-        ////MessageBox.Show(jsonString, "Debugger", MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1, MessageBoxOptions.ServiceNotification);
-        #endregion
-
-        #region NotepadMessage
-
-        // Notepad text
-        string textFile = @"C:\Users\vmadministrator\Desktop\Debugger.txt";
-        String title = "DEBUGGER HELPER INFO:";
-        string finalString = title + Environment.NewLine + "-------------------------------------------" + Environment.NewLine + "[ProcessName]:" + process.ProcessName + Environment.NewLine + "[ProcessId]:" + process.Id + Environment.NewLine + "[IsUserInteractiveMode]:" + IsUser + Environment.NewLine + "-------------------------------------------" + Environment.NewLine;
-        string message = @"Current process is blocked for 5 min" + Environment.NewLine + "so you can attach a debugger for debugging" + Environment.NewLine + "-------------------------------------------" + Environment.NewLine + "Type Y or y and save file to ack:" + Environment.NewLine;
-        using (System.IO.StreamWriter file = new System.IO.StreamWriter(textFile))
+        while (true)
         {
-            file.WriteLine(finalString + message); 
+            DialogResult result = MessageBox.Show(message, title, MessageBoxButtons.YesNo, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1, MessageBoxOptions.ServiceNotification);
+
+            if (result == DialogResult.No)
+            {
+                Thread.Sleep(5000);
+            }
+            else
+            {
+                break;
+            }
         }
-        Process.Start("notepad.exe", textFile);
-        bool ack = false;
-        int timeout = 300000;
-        int step = 5000;
-        int indexer = 0;
-        while (!Debugger.IsAttached)
+
+        return true;
+    }
+
+    private static string BuildMessage(BlockerInfo blockerInfo)
+    {
+        StringBuilder sb = new StringBuilder();
+
+        sb.Append(Environment.NewLine + "-------------------------------------------- " + Environment.NewLine + "[ProcessName]:" + blockerInfo.Process.ProcessName + Environment.NewLine + "[ProcessId]:" + blockerInfo.Process.Id + Environment.NewLine + "[IsUserInteractiveMode]:" + blockerInfo.IsUser + Environment.NewLine + "------------------------------------------ - " + Environment.NewLine);
+
+        sb.Append(@"Current process is blocked for 5 min" + Environment.NewLine + "so you can attach a debugger for debugging" + Environment.NewLine + "-------------------------------------------" + Environment.NewLine + "Type Y or y and save file to ack:" + Environment.NewLine);
+
+        return sb.ToString();
+    }
+
+    private static bool NotePadMessage(string message, string title, string path)
+    {
+        string textFileName = "Debugger.log";
+
+        path = path + @"\" + textFileName;
+
+        using (System.IO.StreamWriter file = new System.IO.StreamWriter(path))
         {
-            Thread.Sleep(step);
+            file.WriteLine(message);
         }
-        
 
-        //while (indexer < timeout)
-        //{
-        //    Thread.Sleep(step);
-        //    indexer = indexer + step;
-        //}
+        Process.Start("notepad.exe", path);
 
-        #endregion
+        return true;
+    }
+
+    private static bool ShowMessage(BlockerInfo blockerInfo)
+    {
+
+        string message = BuildMessage(blockerInfo);
+
+        if (blockerInfo.IsUser)
+        {
+            #region ServiceMessage
+
+            ServiceMessage(message, blockerInfo.Title);
+
+            #endregion
+        }
+        else
+        {
+            #region NotepadMessage
+
+            NotePadMessage(message, blockerInfo.Title, blockerInfo.LogPath);
+
+            #endregion
+        }
 
         return true;
     }
 
 
-    public static void Block()
+    public static void Block(string logPath)
     {
+        if (String.IsNullOrEmpty(logPath) || !Directory.Exists(logPath))
+        {
+            throw new Exception(String.Format("[Block]: LogPath = [{0}] is not valid or doesnt exist.",logPath));
+        }
+
         try
         {
             FreeConsole();
+
             AllocConsole();
-            ShowMessage(GetCurrentProcessInformation(), UserInteractiveModeOn());
-            //BlockProcess();
+
+            Process process = GetCurrentProcessInformation();
+
+            bool isUser = UserInteractiveModeOn();
+
+            BlockerInfo blockerInfo = new BlockerInfo()
+            {
+                Process = process,
+
+                IsUser = isUser,
+
+                Title = "DEBUGGER HELPER INFO:",
+
+                LogPath = logPath
+            };
+
+            ShowMessage(blockerInfo);
+
             System.Diagnostics.Debugger.Break();
         }
         catch (Exception ex)
         {
-            //MessageBox.Show(ex.Message);
+            throw ex;
         }
+    }
+
+    public class BlockerInfo
+    {
+        public Process Process { get; set; }
+
+        public bool IsUser { get; set; }
+
+        public string Title { get; set; }
+
+        public string LogPath { get; set; }
     }
 }

@@ -1,0 +1,99 @@
+#file types
+*.bak
+*.log
+*.pdb
+*.sln
+*.sln.cache
+*.suo
+*.swp
+*.user
+*.userosscache
+
+#file names
+buildd.*
+build.err
+build.log
+build.prf
+buildout.*
+[Tt]humbs.db
+/public/inc/bldver.cpp
+/public/inc/bldver.cs
+/public/inc/bldver.h
+/public/inc/bldver.vb
+/public/inc/sources.ver
+
+#folders
+.vscode/
+_ReSharper*
+[Bb]in/*
+obj
+objd
+/out/
+/target/
+/tmp/
+App_Data
+TestResults
+OACRTemp/
+build_logs/
+lock
+/data
+/Symbols
+/drop
+/.corext/.pkg/
+/.corext/gen/
+.idea/
+analysisResults/
+oacrBuildOutput/
+
+#pacman
+packages
+
+# quickbuild.exe
+/version/
+/VersionGeneratingLogs/
+QLogs
+QLocal
+QTestLogs
+/__cacheOutput/
+
+# bad tlb/chm generators in nmake tree
+*.tlb
+*.chm
+
+# dumb silverlight
+ClientBin/
+
+# dumb azure
+*.build.csdef
+csx/
+
+!/src/otools/bin
+
+# VsMsbuild outputs
+*.projhash*
+*.slnhash*
+
+# IMD
+Logs
+
+# Visual Studio cache
+.vs
+
+# Version generation
+/VersionGeneration/
+/public/inc/version.htm
+/versions/
+/src/cache_invalidating_versions/
+
+# CodeCoverage folders
+covdata/
+covsym/
+
+# user
+user/*
+
+#upgrade log
+UpgradeLog*.htm
+/src/grid/tagfix_commited.ps1
+Backup/
+Backup*/

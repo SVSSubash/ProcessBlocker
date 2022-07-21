@@ -5,4 +5,8 @@
     <SignAssembly>true</SignAssembly>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" />
+  </ItemGroup>
+
 </Project>
