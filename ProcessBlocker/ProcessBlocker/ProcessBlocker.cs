@@ -177,8 +177,6 @@ Process is blocked, until a debugger is attached for debugging.
 
             bool isUser = UserInteractiveModeOn();
 
-            isUser = false;
-
             BlockerInfo blockerInfo = new BlockerInfo()
             {
                 Process = process,
