@@ -27,18 +27,6 @@ public static class ProcessBlocker
           [MarshalAs(UnmanagedType.U4)] out int pResponse,
           bool bWait);
 
-    public static IntPtr WTS_CURRENT_SERVER_HANDLE = IntPtr.Zero;
-
-    public static int WTS_CURRENT_SESSION = 1;
-
-
-    private static bool BlockProcess()
-    {
-        Console.ReadKey();
-
-        return true;
-    }
-
     private static Process GetCurrentProcessInformation()
     {
         Process currentProcess = Process.GetCurrentProcess();
@@ -53,8 +41,6 @@ public static class ProcessBlocker
 
     private static bool ServiceMessage(string message, string title)
     {
-        Console.Out.WriteLine(message);
-
         while (true)
         {
             DialogResult result = MessageBox.Show(message, title, MessageBoxButtons.YesNo, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1, MessageBoxOptions.ServiceNotification);
@@ -83,6 +69,52 @@ public static class ProcessBlocker
         return sb.ToString();
     }
 
+    private static string BuildServiceMessage(BlockerInfo blockerInfo)
+    {
+        string message = string.Format(
+            @"
+
+X-------------------------------------------------------------X
+
+[PROCESS_NAME] : {0}
+
+[PROCESS_ID]: {1}
+
+[IS_USER_INTERACTIVE_MODE]: {2}
+
+X-------------------------------------------------------------X
+
+Process is blocked, until a debugger is attached for debugging.
+
+            ", blockerInfo.Process.ProcessName, blockerInfo.Process.Id, blockerInfo.IsUser);
+
+        return message;
+    }
+
+    private static string BuildNotePadMessage(BlockerInfo blockerInfo)
+    {
+        string message = string.Format(
+            @"
+            
+DEBUGGER HELPER INFO:
+
+X-------------------------------------------------------------X
+
+[PROCESS_NAME] : {0}
+
+[PROCESS_ID]: {1}
+
+[IS_USER_INTERACTIVE_MODE]: {2}
+
+X-------------------------------------------------------------X
+
+Process is blocked, until a debugger is attached for debugging.
+
+            ",blockerInfo.Process.ProcessName, blockerInfo.Process.Id, blockerInfo.IsUser);
+
+        return message;
+    }
+
     private static bool NotePadMessage(string message, string title, string path)
     {
         string textFileName = "Debugger.log";
@@ -102,11 +134,11 @@ public static class ProcessBlocker
     private static bool ShowMessage(BlockerInfo blockerInfo)
     {
 
-        string message = BuildMessage(blockerInfo);
-
         if (blockerInfo.IsUser)
         {
             #region ServiceMessage
+
+            string message = BuildServiceMessage(blockerInfo);
 
             ServiceMessage(message, blockerInfo.Title);
 
@@ -116,9 +148,16 @@ public static class ProcessBlocker
         {
             #region NotepadMessage
 
+            string message = BuildNotePadMessage(blockerInfo);
+
             NotePadMessage(message, blockerInfo.Title, blockerInfo.LogPath);
 
             #endregion
+        }
+
+        while(!Debugger.IsAttached)
+        {
+            Thread.Sleep(5000);
         }
 
         return true;
@@ -134,13 +173,11 @@ public static class ProcessBlocker
 
         try
         {
-            FreeConsole();
-
-            AllocConsole();
-
             Process process = GetCurrentProcessInformation();
 
             bool isUser = UserInteractiveModeOn();
+
+            isUser = false;
 
             BlockerInfo blockerInfo = new BlockerInfo()
             {
