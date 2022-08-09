@@ -1,32 +1,15 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using System.Linq;
 
 public static class ProcessBlocker
 {
-    [DllImport("kernel32.dll")]
-    private static extern Int32 AllocConsole();
-
-    [DllImport("kernel32.dll")]
-    private static extern Int32 FreeConsole();
-
-    [DllImport("wtsapi32.dll", SetLastError = true)]
-    private static extern bool WTSSendMessage(
-          IntPtr hServer,
-          [MarshalAs(UnmanagedType.I4)] int SessionId,
-          String pTitle,
-          [MarshalAs(UnmanagedType.U4)] int TitleLength,
-          String pMessage,
-          [MarshalAs(UnmanagedType.U4)] int MessageLength,
-          [MarshalAs(UnmanagedType.U4)] int Style,
-          [MarshalAs(UnmanagedType.U4)] int Timeout,
-          [MarshalAs(UnmanagedType.U4)] out int pResponse,
-          bool bWait);
-
     private static Process GetCurrentProcessInformation()
     {
         Process currentProcess = Process.GetCurrentProcess();
@@ -58,35 +41,34 @@ public static class ProcessBlocker
         return true;
     }
 
-    private static string BuildMessage(BlockerInfo blockerInfo)
-    {
-        StringBuilder sb = new StringBuilder();
-
-        sb.Append(Environment.NewLine + "-------------------------------------------- " + Environment.NewLine + "[ProcessName]:" + blockerInfo.Process.ProcessName + Environment.NewLine + "[ProcessId]:" + blockerInfo.Process.Id + Environment.NewLine + "[IsUserInteractiveMode]:" + blockerInfo.IsUser + Environment.NewLine + "------------------------------------------ - " + Environment.NewLine);
-
-        sb.Append(@"Current process is blocked for 5 min" + Environment.NewLine + "so you can attach a debugger for debugging" + Environment.NewLine + "-------------------------------------------" + Environment.NewLine + "Type Y or y and save file to ack:" + Environment.NewLine);
-
-        return sb.ToString();
-    }
-
     private static string BuildServiceMessage(BlockerInfo blockerInfo)
     {
         string message = string.Format(
             @"
 
-X-------------------------------------------------------------X
+X------------------------START-------------------------------------X
 
 [PROCESS_NAME] : {0}
 
 [PROCESS_ID]: {1}
 
-[IS_USER_INTERACTIVE_MODE]: {2}
+[PROCESS_BLOCK_POINT]: {2}
 
-X-------------------------------------------------------------X
+[ASSEMBLY INFO:]
 
-Process is blocked, until a debugger is attached for debugging.
+    [CALLING_ASSEMBLY_NAME]: {3}
 
-            ", blockerInfo.Process.ProcessName, blockerInfo.Process.Id, blockerInfo.IsUser);
+    [CALLING_ASSEMBLY_FULLNAME]: {4}
+
+    [ASSEMBLY_LOCATION]:{5}
+
+    [IS_GAC]:{6}
+
+[IS_USER_INTERACTIVE_MODE]: {7}
+
+X-------------------------END--------------------------------------X
+
+            ", blockerInfo.Process.ProcessName, blockerInfo.Process.Id, blockerInfo.StackTrace, blockerInfo.Assembly.GetName().Name, blockerInfo.Assembly.FullName, blockerInfo.Assembly.Location, blockerInfo.Assembly.GlobalAssemblyCache, blockerInfo.IsUser );
 
         return message;
     }
@@ -98,26 +80,38 @@ Process is blocked, until a debugger is attached for debugging.
             
 DEBUGGER HELPER INFO:
 
-X-------------------------------------------------------------X
+X------------------------START-------------------------------------X
 
 [PROCESS_NAME] : {0}
 
 [PROCESS_ID]: {1}
 
-[IS_USER_INTERACTIVE_MODE]: {2}
+[PROCESS_BLOCK_POINT]: {2}
 
-X-------------------------------------------------------------X
+[ASSEMBLY INFO:]
 
-Process is blocked, until a debugger is attached for debugging.
+    [CALLING_ASSEMBLY_NAME]: {3}
 
-            ",blockerInfo.Process.ProcessName, blockerInfo.Process.Id, blockerInfo.IsUser);
+    [CALLING_ASSEMBLY_FULLNAME]: {4}
+
+    [ASSEMBLY_LOCATION]:{5}
+
+    [IS_GAC]:{6}
+
+[IS_USER_INTERACTIVE_MODE]: {7}
+
+X-------------------------END--------------------------------------X
+
+            ", blockerInfo.Process.ProcessName, blockerInfo.Process.Id, blockerInfo.StackTrace, blockerInfo.Assembly.GetName().Name, blockerInfo.Assembly.FullName, blockerInfo.Assembly.Location, blockerInfo.Assembly.GlobalAssemblyCache, blockerInfo.IsUser);
 
         return message;
     }
 
     private static bool NotePadMessage(string message, string title, string path)
     {
-        string textFileName = "Debugger.log";
+        Guid fileName = Guid.NewGuid();
+
+        string textFileName = "Debugger" + "_" + fileName + ".log";
 
         path = path + @"\" + textFileName;
 
@@ -163,9 +157,16 @@ Process is blocked, until a debugger is attached for debugging.
         return true;
     }
 
-
     public static void Block(string logPath)
     {
+        // Getting the stack trace. The stack trace holds all the code upto this point, removing the code thats in this dll here, means removing the first 6 lines.
+
+        string[] stackTrace = Environment.StackTrace.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
+
+        // Getting the calling assembly.
+
+        Assembly callingAssembly = Assembly.GetCallingAssembly();
+
         if (String.IsNullOrEmpty(logPath) || !Directory.Exists(logPath))
         {
             throw new Exception(String.Format("[Block]: LogPath = [{0}] is not valid or doesnt exist.",logPath));
@@ -185,7 +186,11 @@ Process is blocked, until a debugger is attached for debugging.
 
                 Title = "DEBUGGER HELPER INFO:",
 
-                LogPath = logPath
+                LogPath = logPath,
+
+                StackTrace = stackTrace[7], // passing the 7 line, that is the process block point source line.
+
+                Assembly = callingAssembly
             };
 
             ShowMessage(blockerInfo);
@@ -207,5 +212,9 @@ Process is blocked, until a debugger is attached for debugging.
         public string Title { get; set; }
 
         public string LogPath { get; set; }
+
+        public string StackTrace { get; set; }
+
+        public Assembly Assembly { get; set; }
     }
 }
