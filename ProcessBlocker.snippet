@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+    <CodeSnippet Format="1.0.0">
+        <Header>
+            <Title>Add Process Blocker</Title>
+        </Header>
+        <Snippet>
+            <Code Language="CSharp">
+                <![CDATA[#if DEBUG
+            string path = @"c:\users\vmadministrator\desktop";
+            System.Reflection.Assembly.LoadFrom(path + @"\ProcessBlocker.dll").GetType("ProcessBlocker").GetMethod("Block").Invoke(null, new object[] { path });
+                #endif]]>
+            </Code>
+        </Snippet>
+    </CodeSnippet>
+</CodeSnippets>
